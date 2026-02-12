@@ -19,9 +19,9 @@ import colorsys
 #
 # Qué hace paso a paso:
 # 1) Asegura que r, g, b estén dentro de 0..255 (_clamp).
-# 2) Normaliza a 0..1 porque colorsys trabaja en ese rango.
-# 3) Convierte RGB→HSV con colorsys (h, s, v en 0..1).
-# 4) Reescala a los rangos de OpenCV y redondea a enteros.
+# 2) Si OpenCV está disponible, usa cv2.cvtColor para que el HSV calculado
+#    coincida exactamente con el HSV que usa la imagen (evita desviaciones de tono).
+# 3) Si OpenCV NO está disponible, usa colorsys (normaliza a 0..1 y reescala).
 #
 # Devuelve:
 # - (h, s, v) en rangos OpenCV, listos para usarse en el resto del proyecto.
@@ -30,6 +30,13 @@ def convertir_rgb_a_hsv(r, g, b):
     r_ok = _clamp(r)
     g_ok = _clamp(g)
     b_ok = _clamp(b)
+
+    # Preferimos la conversión de OpenCV cuando sea posible para evitar diferencias
+    # entre implementaciones (por ejemplo, morado/cian que se ve más azulado/verdoso).
+    if cv2 is not None and np is not None:
+        bgr = np.uint8([[[b_ok, g_ok, r_ok]]])
+        hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)[0, 0]
+        return int(hsv[0]), int(hsv[1]), int(hsv[2])
 
     r_norm = r_ok / 255.0
     g_norm = g_ok / 255.0
