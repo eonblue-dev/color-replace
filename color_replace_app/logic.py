@@ -8,6 +8,23 @@ except Exception:
 import colorsys
 
 
+# Convierte un color RGB (0..255) al formato HSV que usa OpenCV.
+#
+# ¿Por qué existe?
+# - Tkinter (colorchooser) entrega colores en RGB (0..255).
+# - OpenCV trabaja muy bien seleccionando y modificando colores en HSV, pero su HSV usa rangos:
+#   - H: 0..179
+#   - S: 0..255
+#   - V: 0..255
+#
+# Qué hace paso a paso:
+# 1) Asegura que r, g, b estén dentro de 0..255 (_clamp).
+# 2) Normaliza a 0..1 porque colorsys trabaja en ese rango.
+# 3) Convierte RGB→HSV con colorsys (h, s, v en 0..1).
+# 4) Reescala a los rangos de OpenCV y redondea a enteros.
+#
+# Devuelve:
+# - (h, s, v) en rangos OpenCV, listos para usarse en el resto del proyecto.
 def convertir_rgb_a_hsv(r, g, b):
     # Convertir RGB (0-255) a HSV compatible con OpenCV (H 0-179, S/V 0-255).
     r_ok = _clamp(r)
@@ -25,6 +42,26 @@ def convertir_rgb_a_hsv(r, g, b):
     return h_out, s_out, v_out
 
 
+# Crea una máscara (0..255) que marca los píxeles similares a un color HSV objetivo.
+#
+# Entrada:
+# - image_hsv: imagen completa en HSV (OpenCV)
+# - color_hsv: (h, s, v) objetivo (por ejemplo, el pixel seleccionado con click)
+# - tolerancia: cuánto “margen” permitimos alrededor del color objetivo
+# - suavizado: tamaño del blur para suavizar bordes de la máscara
+# - morph: iteraciones de limpieza morfológica (reduce ruido)
+#
+# Salida:
+# - mask (2D, 0..255):
+#   - 0  => no seleccionar
+#   - 255 => seleccionar al máximo
+#
+# Pasos principales:
+# 1) Calcula rangos min/max para H, S y V.
+# 2) Usa cv2.inRange para seleccionar el rango.
+# 3) Maneja el wrap-around del H (0..179) creando dos rangos si hace falta.
+# 4) Suaviza con GaussianBlur (feather).
+# 5) Limpia con morfología (open/close).
 def crear_mascara_hsv(image_hsv, color_hsv, tolerancia, suavizado, morph):
     # Crear mascara HSV con tolerancia, suavizado y limpieza morfologica.
     if image_hsv is None or color_hsv is None or np is None or cv2 is None:
@@ -77,6 +114,23 @@ def crear_mascara_hsv(image_hsv, color_hsv, tolerancia, suavizado, morph):
     return mask
 
 
+# Reemplaza el color en una imagen HSV usando una máscara como guía de “cuánto aplicar”.
+#
+# Entrada:
+# - image_hsv: imagen HSV (OpenCV)
+# - mask: máscara 0..255 (misma altura/ancho que image_hsv)
+# - color_hsv: color destino (h, s, v) en rangos OpenCV
+# - fuerza: 0..100 (intensidad del reemplazo)
+# - mantener_brillo: si True, conserva el canal V original
+#
+# Idea:
+# - Convertimos mask a un alpha 0..1.
+# - Multiplicamos por fuerza para controlar la intensidad.
+# - Mezclamos (blend) H y S hacia el color destino.
+# - V se mantiene o también se mezcla según mantener_brillo.
+#
+# Devuelve:
+# - Imagen BGR (lista para mostrar con OpenCV o convertir a RGB para UI).
 def reemplazar_color(image_hsv, mask, color_hsv, fuerza, mantener_brillo):
     # Reemplazar H/S (y opcionalmente V) usando la mascara como mezcla.
     if image_hsv is None or mask is None or np is None or cv2 is None:
@@ -107,6 +161,16 @@ def reemplazar_color(image_hsv, mask, color_hsv, fuerza, mantener_brillo):
     return cv2.cvtColor(hsv_new, cv2.COLOR_HSV2BGR)
 
 
+# Genera una vista previa para ver la selección de la máscara (sin “procesar” definitivo).
+#
+# Qué hace:
+# - Copia la imagen original.
+# - Crea una imagen roja del mismo tamaño.
+# - Convierte la máscara a alpha (0..1) y la hace más suave (multiplica por 0.45).
+# - Mezcla base + rojo para resaltar la zona seleccionada.
+#
+# Devuelve:
+# - Imagen BGR con la zona seleccionada marcada en rojo.
 def crear_vista_previa(image_bgr, mask):
     # Generar una vista previa tintada para visualizar la seleccion.
     if image_bgr is None or mask is None or np is None:
@@ -127,5 +191,8 @@ def crear_vista_previa(image_bgr, mask):
     return preview.astype(np.uint8)
 
 
+# Helper: limita un valor al rango 0..255 y lo convierte a int.
+#
+# Se usa para evitar valores inválidos de canales de color.
 def _clamp(value):
     return max(0, min(int(value), 255))

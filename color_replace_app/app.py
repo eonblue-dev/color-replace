@@ -20,7 +20,20 @@ logic.cv2 = cv2
 logic.np = np
 
 
+# App de escritorio (Tkinter) para reemplazar un color en una imagen usando OpenCV.
+#
+# Idea general del proyecto:
+# - `app.py` = capa de UI: botones, sliders, canvas, eventos, mostrar imágenes.
+# - `logic.py` = capa de procesamiento: máscara HSV, reemplazo de color, preview.
+#
+# Nota sobre dependencias:
+# - Importamos `cv2`/`numpy`/`PIL` con try/except para dar errores amigables.
+# - Luego asignamos `logic.cv2 = cv2` y `logic.np = np` para que `logic.py` use
+#   las mismas dependencias (o detecte si faltan).
 class ColorReplaceApp:
+
+    # Constructor: recibe el root de Tkinter y prepara el estado inicial.
+    # Aquí se definen variables que se irán actualizando durante el uso.
     def __init__(self, root):
         self.root = root
         self.root.title("Color Replace - OpenCV")
@@ -36,6 +49,10 @@ class ColorReplaceApp:
 
         self._build_ui()
 
+    # Construye toda la interfaz:
+    # - Panel izquierdo: botones y controles (sliders/checkbox)
+    # - Panel derecho: canvas donde se dibuja la imagen
+    # También conecta el click del canvas al método `on_canvas_click`.
     def _build_ui(self):
         self.left = tk.Frame(self.root, padx=10, pady=10)
         self.left.pack(side=tk.LEFT, fill=tk.Y)
@@ -82,6 +99,11 @@ class ColorReplaceApp:
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.canvas.bind("<Button-1>", self.on_canvas_click)
 
+    # Abre un diálogo para elegir una imagen y la carga con OpenCV.
+    # Guarda:
+    # - `image_bgr`: imagen original (BGR, OpenCV)
+    # - `image_hsv`: la misma imagen convertida a HSV (para seleccionar/reemplazar)
+    # Y muestra la imagen en el canvas.
     def load_image(self):
         if cv2 is None or Image is None:
             messagebox.showerror("Error", "Faltan dependencias: cv2 o PIL.")
@@ -105,16 +127,21 @@ class ColorReplaceApp:
         self.show_image(self.image_bgr)
         self.status.config(text="Imagen cargada")
 
+    # Vuelve a mostrar la imagen original (si hay una cargada).
+    # Útil para comparar con el resultado procesado.
     def show_original(self):
         if self.image_bgr is None:
             return
         self.show_image(self.image_bgr)
         self.status.config(text="Mostrando original")
 
+    # Activa el “modo selección”: el próximo click en el canvas capturará el color objetivo.
     def enable_pick(self):
         self.pick_mode = True
         self.status.config(text="Click en la imagen para seleccionar color")
 
+    # Abre el selector de color (Tkinter) para elegir el color destino.
+    # El selector devuelve RGB, y lo convertimos a HSV de OpenCV usando `logic.convertir_rgb_a_hsv`.
     def choose_target_color(self):
         color = colorchooser.askcolor(title="Selecciona color destino")
         if not color or color[0] is None:
@@ -123,6 +150,14 @@ class ColorReplaceApp:
         self.target_hsv = logic.convertir_rgb_a_hsv(r, g, b)
         self.status.config(text=f"Destino HSV: {self.target_hsv}")
 
+    # Maneja el click en el canvas.
+    # Si `pick_mode` está activo:
+    # - Convierte la coordenada del click (canvas) a coordenadas reales de la imagen.
+    # - Lee el pixel HSV en esa posición y lo guarda como `picked_hsv`.
+    # - Muestra una vista previa de selección (tinte rojo) para verificar la máscara.
+    #
+    # Importante: la imagen se dibuja escalada en el canvas. Por eso usamos `display_info`
+    # (guardado en `_show_on_canvas`) para mapear correctamente el click.
     def on_canvas_click(self, event):
         if not self.pick_mode or self.image_hsv is None or self.display_info is None:
             return
@@ -148,6 +183,12 @@ class ColorReplaceApp:
         self._show_selection_preview()
         self.status.config(text=f"Color capturado HSV: {self.picked_hsv}")
 
+    # Botón principal de procesamiento.
+    # Flujo:
+    # 1) Valida dependencias y que exista imagen + color objetivo.
+    # 2) Crea máscara HSV llamando a `logic.crear_mascara_hsv`.
+    # 3) Reemplaza el color llamando a `logic.reemplazar_color`.
+    # 4) Muestra el resultado en el canvas.
     def process(self):
         if cv2 is None or np is None:
             messagebox.showerror("Error", "Faltan dependencias: cv2 o numpy.")
@@ -183,6 +224,13 @@ class ColorReplaceApp:
         self.show_image(self.result_bgr)
         self.status.config(text="Procesado")
 
+    # Genera y muestra una preview de selección (antes del reemplazo final).
+    # Esto sirve para que el usuario vea si la máscara está bien ajustada con los sliders.
+    #
+    # Internamente:
+    # - crea máscara con `logic.crear_mascara_hsv`
+    # - genera preview con `logic.crear_vista_previa`
+    # - muestra la preview
     def _show_selection_preview(self):
         if self.image_bgr is None:
             return
@@ -198,6 +246,10 @@ class ColorReplaceApp:
             return
         self.show_image(preview)
 
+    # Muestra una imagen BGR (OpenCV) en el canvas.
+    # Conversión necesaria:
+    # - OpenCV: BGR
+    # - Pillow/Tkinter: RGB
     def show_image(self, bgr):
         if Image is None:
             return
@@ -205,6 +257,13 @@ class ColorReplaceApp:
         pil_img = Image.fromarray(img)
         self._show_on_canvas(pil_img)
 
+    # Dibuja una imagen PIL en el canvas ajustándola al tamaño disponible.
+    #
+    # Qué hace:
+    # - Calcula un `scale` para que la imagen quepa sin deformarse.
+    # - Redimensiona la imagen.
+    # - La centra en el canvas.
+    # - Guarda `display_info` para poder mapear clicks del canvas a píxeles reales.
     def _show_on_canvas(self, pil_img):
         cw = max(self.canvas.winfo_width(), 1)
         ch = max(self.canvas.winfo_height(), 1)
@@ -229,6 +288,11 @@ class ColorReplaceApp:
         self.canvas.delete("all")
         self.canvas.create_image(self.display_info["x0"], self.display_info["y0"], image=self.tk_img, anchor=tk.NW)
 
+
+    # Punto de entrada de la app.
+    # - Crea la ventana principal de Tkinter.
+    # - Instancia la clase de la aplicación.
+    # - Inicia el loop de eventos (la app queda “escuchando” clicks/teclas/acciones).
 if __name__ == "__main__":
     root = tk.Tk()
     app = ColorReplaceApp(root)
