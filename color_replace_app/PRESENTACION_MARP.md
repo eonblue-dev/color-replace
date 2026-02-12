@@ -91,7 +91,7 @@ Construir una app de escritorio que permita:
 
 ```mermaid
 flowchart LR
-  UI[app.py<br/>Tkinter UI] -->|imagen BGR/HSV + params| L[logic.py<br/>Procesamiento]
+  UI[app.py<br>Tkinter UI] -->|imagen BGR/HSV + params| L[logic.py<br>Procesamiento]
   L -->|resultado BGR| UI
 
   UI --> CV2[(OpenCV)]
@@ -455,12 +455,12 @@ Ventaja práctica: la selección es más robusta a cambios de iluminación que e
 ```mermaid
 flowchart TD
   A[Imagen BGR] --> B[Convertir a HSV]
-  B --> C[Elegir HSV objetivo<br/>(click)]
-  C --> D[Máscara HSV<br/>(inRange + wrap H)]
-  D --> E[Suavizado<br/>Gaussian blur]
-  E --> F[Limpieza<br/>Morph open + close]
-  F --> G[Alpha desde máscara<br/>+ fuerza]
-  G --> H[Mezcla en HSV<br/>(H,S y V opcional)]
+  B --> C[Elegir HSV objetivo<br>click]
+  C --> D[Máscara HSV<br>inRange + wrap H]
+  D --> E[Suavizado<br>Gaussian blur]
+  E --> F[Limpieza<br>Morph open + close]
+  F --> G[Alpha desde máscara<br>+ fuerza]
+  G --> H[Mezcla en HSV<br>H,S y V opcional]
   H --> I[HSV→BGR resultado]
 ```
 
