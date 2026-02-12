@@ -92,7 +92,7 @@ Construir una app de escritorio que permita:
 
 ---
 
-## Arquitectura (alto nivel)
+## Arquitectura 
 
 ```mermaid
 flowchart LR
@@ -111,7 +111,7 @@ Notas: separación clara: UI no “sabe” del algoritmo; la lógica no “sabe�
 
 ---
 
-## Idea clave (para juniors)
+## Idea clave 
 
 Este proyecto se entiende mejor si lo piensas como 2 capas:
 
