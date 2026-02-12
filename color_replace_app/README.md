@@ -8,6 +8,10 @@ Incluye una interfaz grafica con controles de tolerancia y mezcla, y permite sel
 - app.py: Interfaz grafica (Tkinter). Maneja la carga de imagen, eventos y la visualizacion.
 - logic.py: Logica de procesamiento de imagen (mascara HSV, reemplazo de color, preview).
 
+## Presentacion
+
+- Ver [PRESENTACION_MARP.md](PRESENTACION_MARP.md) (formato Marp, lista para exponer)
+
 ## Requisitos
 
 - Python 3.9+ (recomendado)

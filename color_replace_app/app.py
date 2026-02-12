@@ -120,7 +120,7 @@ class ColorReplaceApp:
         if not color or color[0] is None:
             return
         r, g, b = [int(c) for c in color[0]]
-        self.target_hsv = logic.to_hsv(r, g, b)
+        self.target_hsv = logic.convertir_rgb_a_hsv(r, g, b)
         self.status.config(text=f"Destino HSV: {self.target_hsv}")
 
     def on_canvas_click(self, event):
@@ -159,7 +159,7 @@ class ColorReplaceApp:
             messagebox.showwarning("Aviso", "Selecciona el color objetivo con click.")
             return
 
-        mask = logic.mask(
+        mask = logic.crear_mascara_hsv(
             self.image_hsv,
             self.picked_hsv,
             self.tol_var.get(),
@@ -170,7 +170,7 @@ class ColorReplaceApp:
             messagebox.showerror("Error", "No se pudo crear la mascara.")
             return
 
-        self.result_bgr = logic.replace(
+        self.result_bgr = logic.reemplazar_color(
             self.image_hsv,
             mask,
             self.target_hsv,
@@ -186,14 +186,14 @@ class ColorReplaceApp:
     def _show_selection_preview(self):
         if self.image_bgr is None:
             return
-        mask = logic.mask(
+        mask = logic.crear_mascara_hsv(
             self.image_hsv,
             self.picked_hsv,
             self.tol_var.get(),
             self.blur_var.get(),
             self.morph_var.get(),
         )
-        preview = logic.preview(self.image_bgr, mask)
+        preview = logic.crear_vista_previa(self.image_bgr, mask)
         if preview is None:
             return
         self.show_image(preview)

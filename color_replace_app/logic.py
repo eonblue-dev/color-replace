@@ -8,52 +8,67 @@ except Exception:
 import colorsys
 
 
-def to_hsv(r, g, b):
+def convertir_rgb_a_hsv(r, g, b):
     # Convertir RGB (0-255) a HSV compatible con OpenCV (H 0-179, S/V 0-255).
-    r_norm = _clamp(r) / 255.0
-    g_norm = _clamp(g) / 255.0
-    b_norm = _clamp(b) / 255.0
+    r_ok = _clamp(r)
+    g_ok = _clamp(g)
+    b_ok = _clamp(b)
+
+    r_norm = r_ok / 255.0
+    g_norm = g_ok / 255.0
+    b_norm = b_ok / 255.0
+
     h, s, v = colorsys.rgb_to_hsv(r_norm, g_norm, b_norm)
-    return int(round(h * 179)), int(round(s * 255)), int(round(v * 255))
+    h_out = int(round(h * 179))
+    s_out = int(round(s * 255))
+    v_out = int(round(v * 255))
+    return h_out, s_out, v_out
 
 
-def mask(image_hsv, picked_hsv, tol, blur, morph):
+def crear_mascara_hsv(image_hsv, color_hsv, tolerancia, suavizado, morph):
     # Crear mascara HSV con tolerancia, suavizado y limpieza morfologica.
-    if image_hsv is None or picked_hsv is None or np is None or cv2 is None:
+    if image_hsv is None or color_hsv is None or np is None or cv2 is None:
         return None
 
-    h, s, v = picked_hsv
-    s_low = max(s - tol, 0)
-    s_high = min(s + tol, 255)
-    v_low = max(v - tol, 0)
-    v_high = min(v + tol, 255)
+    hue, sat, val = color_hsv
 
-    h_low = h - tol
-    h_high = h + tol
+    sat_min = max(sat - tolerancia, 0)
+    sat_max = min(sat + tolerancia, 255)
+    val_min = max(val - tolerancia, 0)
+    val_max = min(val + tolerancia, 255)
 
-    # Manejar el wrap-around del canal H (0-179) cuando la tolerancia cruza extremos.
-    if h_low < 0:
-        lower1 = np.array([0, s_low, v_low])
-        upper1 = np.array([h_high, s_high, v_high])
-        lower2 = np.array([179 + h_low, s_low, v_low])
-        upper2 = np.array([179, s_high, v_high])
-        mask = cv2.inRange(image_hsv, lower1, upper1) | cv2.inRange(image_hsv, lower2, upper2)
-    elif h_high > 179:
-        lower1 = np.array([0, s_low, v_low])
-        upper1 = np.array([h_high - 179, s_high, v_high])
-        lower2 = np.array([h_low, s_low, v_low])
-        upper2 = np.array([179, s_high, v_high])
-        mask = cv2.inRange(image_hsv, lower1, upper1) | cv2.inRange(image_hsv, lower2, upper2)
+    hue_min = hue - tolerancia
+    hue_max = hue + tolerancia
+
+    # Manejar el wrap-around del canal H (0-179).
+    if hue_min < 0:
+        lower1 = np.array([0, sat_min, val_min])
+        upper1 = np.array([hue_max, sat_max, val_max])
+        lower2 = np.array([179 + hue_min, sat_min, val_min])
+        upper2 = np.array([179, sat_max, val_max])
+        mask1 = cv2.inRange(image_hsv, lower1, upper1)
+        mask2 = cv2.inRange(image_hsv, lower2, upper2)
+        mask = mask1 | mask2
+    elif hue_max > 179:
+        lower1 = np.array([0, sat_min, val_min])
+        upper1 = np.array([hue_max - 179, sat_max, val_max])
+        lower2 = np.array([hue_min, sat_min, val_min])
+        upper2 = np.array([179, sat_max, val_max])
+        mask1 = cv2.inRange(image_hsv, lower1, upper1)
+        mask2 = cv2.inRange(image_hsv, lower2, upper2)
+        mask = mask1 | mask2
     else:
-        lower = np.array([h_low, s_low, v_low])
-        upper = np.array([h_high, s_high, v_high])
+        lower = np.array([hue_min, sat_min, val_min])
+        upper = np.array([hue_max, sat_max, val_max])
         mask = cv2.inRange(image_hsv, lower, upper)
 
-    if blur % 2 == 0:
-        blur += 1
-    if blur > 1:
-        mask = cv2.GaussianBlur(mask, (blur, blur), 0)
+    # Suavizado: kernel impar.
+    if suavizado % 2 == 0:
+        suavizado = suavizado + 1
+    if suavizado > 1:
+        mask = cv2.GaussianBlur(mask, (suavizado, suavizado), 0)
 
+    # Morfologia para limpiar ruido.
     if morph > 0:
         kernel = np.ones((3, 3), np.uint8)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=morph)
@@ -62,47 +77,54 @@ def mask(image_hsv, picked_hsv, tol, blur, morph):
     return mask
 
 
-def replace(image_hsv, mask, target_hsv, mix, keep_v):
-    # Reemplazar H/S (y opcionalmente V) usando la mascara como alfa de mezcla.
+def reemplazar_color(image_hsv, mask, color_hsv, fuerza, mantener_brillo):
+    # Reemplazar H/S (y opcionalmente V) usando la mascara como mezcla.
     if image_hsv is None or mask is None or np is None or cv2 is None:
         return None
 
-    alpha = (mask.astype(np.float32) / 255.0) * (mix / 100.0)
+    alpha = mask.astype(np.float32) / 255.0
+    alpha = alpha * (fuerza / 100.0)
     alpha = np.clip(alpha, 0.0, 1.0)
 
     hsv = image_hsv.astype(np.float32)
-    h_ch, s_ch, v_ch = cv2.split(hsv)
+    hue_ch, sat_ch, val_ch = cv2.split(hsv)
 
-    target_h, target_s, target_v = target_hsv
-    h_new = (1.0 - alpha) * h_ch + alpha * target_h
-    s_new = (1.0 - alpha) * s_ch + alpha * target_s
+    hue_t, sat_t, val_t = color_hsv
 
-    if keep_v:
-        v_new = v_ch
+    hue_new = (1.0 - alpha) * hue_ch + alpha * hue_t
+    sat_new = (1.0 - alpha) * sat_ch + alpha * sat_t
+
+    if mantener_brillo:
+        val_new = val_ch
     else:
-        v_new = (1.0 - alpha) * v_ch + alpha * target_v
+        val_new = (1.0 - alpha) * val_ch + alpha * val_t
 
-    hsv_new = cv2.merge([
-        np.clip(h_new, 0, 179).astype(np.uint8),
-        np.clip(s_new, 0, 255).astype(np.uint8),
-        np.clip(v_new, 0, 255).astype(np.uint8),
-    ])
+    hue_new = np.clip(hue_new, 0, 179).astype(np.uint8)
+    sat_new = np.clip(sat_new, 0, 255).astype(np.uint8)
+    val_new = np.clip(val_new, 0, 255).astype(np.uint8)
 
+    hsv_new = cv2.merge([hue_new, sat_new, val_new])
     return cv2.cvtColor(hsv_new, cv2.COLOR_HSV2BGR)
 
 
-def preview(image_bgr, mask):
+def crear_vista_previa(image_bgr, mask):
     # Generar una vista previa tintada para visualizar la seleccion.
     if image_bgr is None or mask is None or np is None:
         return None
 
-    overlay = image_bgr.copy()
-    tint = np.zeros_like(overlay)
+    base = image_bgr.copy()
+    tint = np.zeros_like(base)
     tint[:, :] = (0, 0, 255)
-    alpha = (mask.astype(np.float32) / 255.0) * 0.45
+
+    alpha = mask.astype(np.float32) / 255.0
+    alpha = alpha * 0.45
     alpha = alpha[:, :, None]
-    preview = (overlay.astype(np.float32) * (1.0 - alpha) + tint.astype(np.float32) * alpha).astype(np.uint8)
-    return preview
+
+    base = base.astype(np.float32)
+    tint = tint.astype(np.float32)
+
+    preview = base * (1.0 - alpha) + tint * alpha
+    return preview.astype(np.uint8)
 
 
 def _clamp(value):
