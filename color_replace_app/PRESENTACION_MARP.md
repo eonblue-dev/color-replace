@@ -1,8 +1,3 @@
----
-marp: true
-paginate: true
----
-
 # Color Replace App
 
 Reemplazo de color en imágenes (HSV + OpenCV) con interfaz de escritorio (Tkinter)
