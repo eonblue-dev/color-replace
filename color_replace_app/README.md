@@ -43,7 +43,9 @@ py app.py
 ## Uso basico
 
 1. Clic en "Cargar imagen" y selecciona un archivo JPG/PNG/BMP.
-2. Clic en "Seleccionar con click" y luego clic sobre el color objetivo en la imagen.
+2. Define el color objetivo (el que quieres cambiar):
+  - Opcion A: Clic en "Seleccionar con click" y luego clic sobre el color objetivo en la imagen.
+  - Opcion B: Clic en "Elegir color objetivo..." y selecciona el color desde el picker.
 3. Clic en "Elegir color destino..." para definir el nuevo color.
 4. Ajusta los controles si es necesario:
    - Tolerancia (HSV): que tan amplio es el rango del color objetivo.

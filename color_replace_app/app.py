@@ -67,6 +67,7 @@ class ColorReplaceApp:
 
         tk.Label(self.left, text="Color objetivo").pack(anchor="w", pady=(10, 0))
         tk.Button(self.left, text="Seleccionar con click", command=self.enable_pick).pack(fill=tk.X, pady=5)
+        tk.Button(self.left, text="Elegir color objetivo...", command=self.choose_source_color).pack(fill=tk.X, pady=5)
 
         tk.Label(self.left, text="Color destino").pack(anchor="w", pady=(10, 0))
         tk.Button(self.left, text="Elegir color destino...", command=self.choose_target_color).pack(fill=tk.X, pady=5)
@@ -149,6 +150,30 @@ class ColorReplaceApp:
         r, g, b = [int(c) for c in color[0]]
         self.target_hsv = logic.convertir_rgb_a_hsv(r, g, b)
         self.status.config(text=f"Destino HSV: {self.target_hsv}")
+
+    # Permite elegir el color objetivo (el que quieres cambiar) usando el selector de color.
+    # Esto es una alternativa a seleccionar con click en la imagen.
+    #
+    # Flujo:
+    # - Pide un color RGB al usuario.
+    # - Lo convierte a HSV (formato OpenCV) con `logic.convertir_rgb_a_hsv`.
+    # - Lo guarda en `picked_hsv` para que `process()` pueda usarlo.
+    # - Si hay imagen cargada, muestra la preview de selección.
+    def choose_source_color(self):
+        color = colorchooser.askcolor(title="Selecciona color objetivo (a reemplazar)")
+        if not color or color[0] is None:
+            return
+
+        r, g, b = [int(c) for c in color[0]]
+        self.picked_hsv = logic.convertir_rgb_a_hsv(r, g, b)
+        self.pick_mode = False
+
+        if self.image_hsv is None:
+            self.status.config(text=f"Objetivo HSV: {self.picked_hsv} (carga una imagen para ver preview)")
+            return
+
+        self._show_selection_preview()
+        self.status.config(text=f"Color objetivo HSV: {self.picked_hsv}")
 
     # Maneja el click en el canvas.
     # Si `pick_mode` está activo:
