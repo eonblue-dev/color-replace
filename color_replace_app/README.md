@@ -1,32 +1,67 @@
-# Color Replace App
+# Color Replace (OpenCV + Tkinter)
 
-Aplicacion de escritorio para reemplazar un color objetivo por un color destino en una imagen usando OpenCV.
-Incluye una interfaz grafica con controles de tolerancia y mezcla, y permite seleccionar el color objetivo con un click.
+App de escritorio en Python para **reemplazar (o recolorear)** un color específico dentro de una imagen usando **selección por similitud en HSV**.
 
-## Estructura del proyecto
+- Selecciona el color a cambiar con **un click** sobre la imagen (o con un **color picker**).
+- Elige el color nuevo (destino).
+- Ajusta tolerancia y suavizado para afinar la máscara.
+- Aplica el reemplazo con una **fuerza de mezcla** configurable y opción de **mantener brillo**.
 
-- app.py: Interfaz grafica (Tkinter). Maneja la carga de imagen, eventos y la visualizacion.
-- logic.py: Logica de procesamiento de imagen (mascara HSV, reemplazo de color, preview).
+---
 
-## Presentacion
+## Qué resuelve
 
-- Ver [PRESENTACION_MARP.md](PRESENTACION_MARP.md) (formato Marp, lista para exponer)
+Cuando quieres recolorear una zona (ropa, objetos, logos, paredes, etc.), hacerlo a mano puede ser lento. Este proyecto automatiza el proceso mediante una máscara en HSV y te da controles simples para afinar el resultado.
 
-## Requisitos
+---
+
+## Funcionalidades
+
+- Carga de imágenes (`.jpg`, `.png`, `.bmp`, …).
+- Selección del color objetivo:
+  - Click sobre la imagen (modo “pick”).
+  - Selector de color (alternativa rápida).
+- Selección del color destino con selector de color.
+- Vista previa de selección (tinte rojo) para validar la máscara.
+- Reemplazo con mezcla controlada:
+  - **Tolerancia (HSV)**
+  - **Suavizado (feather)**
+  - **Limpieza morfológica (morph)**
+  - **Fuerza de mezcla**
+  - **Mantener brillo (canal V)**
+
+---
+
+## Tecnologías
+
+- Python 3
+- Tkinter (UI)
+- OpenCV (procesamiento de imagen)
+- NumPy (operaciones vectorizadas)
+- Pillow (render en Tkinter)
+
+---
+
+## Instalación
+
+### Requisitos
 
 - Python 3.9+ (recomendado)
-- Dependencias:
-  - opencv-python
-  - numpy
-  - pillow
+- Windows / macOS / Linux
 
-Instalacion rapida:
+### Dependencias
+
+Instala dependencias con pip:
 
 ```bash
 pip install opencv-python numpy pillow
 ```
 
-## Ejecucion
+> Tkinter suele venir con Python en Windows. En Linux puede requerir instalación adicional (por ejemplo `python3-tk`).
+
+---
+
+## Ejecución
 
 Desde la carpeta del proyecto:
 
@@ -34,38 +69,66 @@ Desde la carpeta del proyecto:
 python app.py
 ```
 
-Si `python` no funciona en Windows, puedes usar:
+---
 
-```bash
-py app.py
-```
+## Cómo usar
 
-## Uso basico
+1. **Cargar imagen**.
+2. Elegir el **color a cambiar (objetivo)**:
+   - Botón “Elegir color a cambiar (click)” y luego click en la imagen, o
+   - Botón “Elegir color a cambiar (picker)…”.
+3. Elegir el **color nuevo (destino)**.
+4. Ajustar sliders:
+   - **Tolerancia (HSV)**: qué tan “cerca” del color objetivo se selecciona.
+   - **Suavizado (feather)**: suaviza bordes de la máscara.
+   - **Morph iteraciones**: elimina ruido (open/close).
+   - **Fuerza de mezcla**: intensidad del cambio.
+   - **Mantener brillo (V)**: conserva iluminación/sombras originales.
+5. Pulsar **Procesar**.
 
-1. Clic en "Cargar imagen" y selecciona un archivo JPG/PNG/BMP.
-2. Define el color objetivo (el que quieres cambiar):
-  - Opcion A: Clic en "Seleccionar con click" y luego clic sobre el color objetivo en la imagen.
-  - Opcion B: Clic en "Elegir color objetivo..." y selecciona el color desde el picker.
-3. Clic en "Elegir color destino..." para definir el nuevo color.
-4. Ajusta los controles si es necesario:
-   - Tolerancia (HSV): que tan amplio es el rango del color objetivo.
-   - Suavizado (feather): suaviza bordes de la mascara.
-   - Morph iteraciones: limpia ruido con morfologia.
-   - Fuerza de mezcla: intensidad del reemplazo.
-   - Mantener brillo (V): conserva el brillo original.
-5. Clic en "Procesar" para aplicar el reemplazo.
+---
 
-## Notas de funcionamiento
+## Notas técnicas (resumen)
 
-- El color objetivo se trabaja en HSV para una seleccion mas robusta.
-- La mascara se suaviza con blur y se limpia con operaciones morfologicas.
-- El reemplazo mezcla el color destino con un alpha basado en la mascara.
+- El proyecto trabaja en HSV con el formato de OpenCV:
+  - H: 0..179, S: 0..255, V: 0..255.
+- La máscara se construye con `cv2.inRange` y maneja el **wrap-around** del tono (H) cerca de 0/179.
+- La “fuerza de mezcla” es un **blending parcial por píxel** usando una alpha derivada de la máscara:
+  - \(\alpha = (mask/255) \cdot (fuerza/100)\)
+  - Mezcla H/S hacia el destino, y V se mantiene o también se mezcla según la opción.
 
-## Solucion de problemas
+---
 
-- Si ves errores de dependencias, instala los paquetes con el comando de arriba.
-- Si la imagen no se carga, verifica que el archivo sea JPG/PNG/BMP valido.
+## Estructura del proyecto
+
+- `app.py`: interfaz (Tkinter), eventos, canvas, carga y visualización.
+- `logic.py`: procesamiento (máscara HSV, reemplazo de color, vista previa).
+
+---
+
+## Limitaciones
+
+- La selección es por **similitud de color**, no por “objeto”: si el color aparece en varias zonas, se afectarán todas.
+- Sensible a iluminación, sombras, reflejos y compresión (por ejemplo JPEG): puede incluir/excluir píxeles inesperados.
+- No maneja canal alfa (transparencia) de forma explícita.
+
+---
+
+## Próximos pasos (ideas)
+
+- Ajustes de tolerancia separados para H / S / V.
+- Exportar resultado a archivo desde la UI.
+- Soporte para PNG con alpha (cuando aplique).
+
+---
+
+## Autor / Contacto
+
+- Nombre: *Pedro Luis*
+- LinkedIn: *www.linkedin.com/in/pedrl-rf01*
+
+---
 
 ## Licencia
 
-Este proyecto no incluye una licencia explicita. Agrega una si lo vas a distribuir.
+“Proyecto educativo/portfolio”.

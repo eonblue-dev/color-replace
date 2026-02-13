@@ -31,7 +31,7 @@ def convertir_rgb_a_hsv(r, g, b):
     g_ok = _clamp(g)
     b_ok = _clamp(b)
 
-    # Preferimos la conversión de OpenCV cuando sea posible para evitar diferencias
+    # Se prefiere la conversión de OpenCV cuando sea posible para evitar diferencias
     # entre implementaciones (por ejemplo, morado/cian que se ve más azulado/verdoso).
     if cv2 is not None and np is not None:
         bgr = np.uint8([[[b_ok, g_ok, r_ok]]])
