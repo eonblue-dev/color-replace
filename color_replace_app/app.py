@@ -191,16 +191,21 @@ class ColorReplaceApp:
             return
 
         x, y = event.x, event.y
+        # Recuperamos información sobre cómo se dibujó la imagen en el canvas
+        # (posición inicial, tamaño mostrado y escala aplicada)
         x0, y0 = self.display_info["x0"], self.display_info["y0"]
         dw, dh = self.display_info["dw"], self.display_info["dh"]
         scale = self.display_info["scale"]
 
         if x < x0 or y < y0 or x >= x0 + dw or y >= y0 + dh:
             return
-
+        # Convertimos la posición del click en el canvas
+        # a coordenadas reales dentro de la imagen original
         ix = int((x - x0) / scale)
         iy = int((y - y0) / scale)
-
+        # Verificamos que las coordenadas calculadas estén dentro de la imagen
+        # Las imágenes en OpenCV se representan como matrices tridimensionales con forma (alto, ancho, canales).
+        # Al usar shape[:2] obtenemos solo alto y ancho, ignorando el número de canales.
         h, w = self.image_hsv.shape[:2]
         if ix < 0 or iy < 0 or ix >= w or iy >= h:
             return
