@@ -76,8 +76,10 @@ def crear_mascara_hsv(image_hsv, color_hsv, tolerancia, suavizado, morph):
 
     hue, sat, val = color_hsv
 
-    sat_min = max(sat - tolerancia, 0)
-    sat_max = min(sat + tolerancia, 255)
+    sat_min = max(sat - tolerancia, 0)#Saturación va de 0 a 255.
+
+# No puede ser negativa.
+    sat_max = min(sat + tolerancia, 255)#Saturación no puede superar 255.
     val_min = max(val - tolerancia, 0)
     val_max = min(val + tolerancia, 255)
 
@@ -85,6 +87,13 @@ def crear_mascara_hsv(image_hsv, color_hsv, tolerancia, suavizado, morph):
     hue_max = hue + tolerancia
 
     # Manejar el wrap-around del canal H (0-179).
+    # El canal H (Hue) en OpenCV va de 0 a 179 y es circular (0 y 179 están “pegados”).
+    # Si al aplicar la tolerancia nos salimos por debajo de 0 o por encima de 179,
+    # dividimos el rango en dos partes y combinamos ambas máscaras con OR.
+    # Así evitamos perder colores cercanos a los extremos (por ejemplo, rojos).
+    # Después aplicamos un suavizado (GaussianBlur) con kernel impar para
+    # suavizar los bordes de la máscara y evitar recortes bruscos.
+
     if hue_min < 0:
         lower1 = np.array([0, sat_min, val_min])
         upper1 = np.array([hue_max, sat_max, val_max])
@@ -159,7 +168,11 @@ def reemplazar_color(image_hsv, mask, color_hsv, fuerza, mantener_brillo):
         val_new = val_ch
     else:
         val_new = (1.0 - alpha) * val_ch + alpha * val_t
-
+        
+# Aseguramos que los nuevos valores estén dentro del rango válido:
+# H debe estar entre 0 y 179, y S y V entre 0 y 255.
+# np.clip evita que se pasen del límite,
+# y astype(np.uint8) los convierte al formato correcto de imagen.
     hue_new = np.clip(hue_new, 0, 179).astype(np.uint8)
     sat_new = np.clip(sat_new, 0, 255).astype(np.uint8)
     val_new = np.clip(val_new, 0, 255).astype(np.uint8)
